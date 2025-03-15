@@ -12,29 +12,103 @@ struct ContentView: View {
     @State private var colors: [Color] = [.red, .green, .blue, .yellow, .black, .purple]
     @State private var targetColor: Color = .red
     @State private var score: Int = 0
-    @State private var timeRemaining: Int = 5
+    @State private var timeRemaining: Int = 3
     @State private var gameOver: Bool = false
     @State private var timer: Timer?
     @State private var isGameStarted: Bool = false
     @State private var audioPlayer: AVAudioPlayer?
+    @State private var isPaused: Bool = false
 
     var body: some View {
-        VStack {
-            if !isGameStarted {
-                VStack {
-                    Text("Get Color")
+        ZStack {
+            LinearGradient(
+                gradient: Gradient(colors: [.white, .gray.opacity(0.2)]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .edgesIgnoringSafeArea(.all) // Extend the background to fill the entire screen
+
+            VStack {
+                if (!isGameStarted) {
+                    VStack {
+                        Text("Get Color")
+                            .font(.custom("Chalkduster", size: 34))
+                            .fontWeight(.bold)
+                        Text("選擇與文字相同的顏色")
+                            .font(.custom("ChenYuluoyan-2.0-Thin", size: 25))
+                            .foregroundColor(.gray)
+                        Text("時間為3秒")
+                            .font(.custom("ChenYuluoyan-2.0-Thin", size: 20))
+                            .foregroundColor(.gray)
+                        Button("Start") {
+                            isGameStarted = true
+                            playSound(named: "Start sound")
+                            startGame()
+                        }
+                        .font(.custom("Chalkduster", size: 22))
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.blue, lineWidth: 2)
+                        )
+                    }
+                } else if gameOver {
+                    Text("Game Over")
                         .font(.custom("Chalkduster", size: 34))
                         .fontWeight(.bold)
-                    Text("選擇與文字相同的顏色")
-                        .font(.custom("ChenYuluoyan-2.0-Thin", size: 25))
-                        .foregroundColor(.gray)
-                    Text("時間為3秒")
-                        .font(.custom("ChenYuluoyan-2.0-Thin", size: 20))
-                        .foregroundColor(.gray)
-                    Button("Start") {
-                        isGameStarted = true
+                        .foregroundColor(.red)
+                    Text("Score: \(score)")
+                        .font(.custom("Chalkduster", size: 28))
+                        .fontWeight(.bold)
+                    Button("Restart") {
                         playSound(named: "Start sound")
-                        startGame()
+                        restartGame()
+                    }
+                    .font(.custom("Chalkduster", size: 22))
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.blue, lineWidth: 2)
+                    )
+                } else {
+                    Text(" \(colorName(color: targetColor)) ")
+                        .font(.custom("ChenYuluoyan-2.0-Thin", size: 40))
+                        .fontWeight(.bold)
+                    VStack {
+                        HStack {
+                            ForEach(colors.prefix(3), id: \.self) { color in
+                                Rectangle()
+                                    .fill(color)
+                                    .frame(width: 100, height: 100)
+                                    .onTapGesture {
+                                        checkAnswer(color: color)
+                                    }
+                            }
+                        }
+                        HStack {
+                            ForEach(colors.suffix(3), id: \.self) { color in
+                                Rectangle()
+                                    .fill(color)
+                                    .frame(width: 100, height: 100)
+                                    .onTapGesture {
+                                        checkAnswer(color: color)
+                                    }
+                            }
+                        }
+                    }
+                    Text("Time remaining: \(timeRemaining)")
+                        .font(.custom("Chalkduster", size: 22))
+                        .fontWeight(.bold)
+                    Text("Score: \(score)")
+                        .font(.custom("Chalkduster", size: 22))
+                        .fontWeight(.bold)
+                    Button(isPaused ? "Resume" : "Pause") {
+                        if isPaused {
+                            startTimer()
+                        } else {
+                            timer?.invalidate()
+                        }
+                        isPaused.toggle()
                     }
                     .font(.custom("Chalkduster", size: 22))
                     .padding()
@@ -43,66 +117,9 @@ struct ContentView: View {
                             .stroke(Color.blue, lineWidth: 2)
                     )
                 }
-            } else if gameOver {
-                Text("Game Over")
-                    .font(.custom("Chalkduster", size: 34))
-                    .fontWeight(.bold)
-                    .foregroundColor(.red)
-                Text("Score: \(score)")
-                    .font(.custom("Chalkduster", size: 28))
-                    .fontWeight(.bold)
-                Button("Restart") {
-                    playSound(named: "Start sound")
-                    restartGame()
-                }
-                .font(.custom("Chalkduster", size: 22))
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.blue, lineWidth: 2)
-                )
-            } else {
-                Text(" \(colorName(color: targetColor)) ")
-                    .font(.custom("ChenYuluoyan-2.0-Thin", size: 40))
-                    .fontWeight(.bold)
-                VStack {
-                    HStack {
-                        ForEach(colors.prefix(3), id: \.self) { color in
-                            Rectangle()
-                                .fill(color)
-                                .frame(width: 100, height: 100)
-                                .onTapGesture {
-                                    checkAnswer(color: color)
-                                }
-                        }
-                    }
-                    HStack {
-                        ForEach(colors.suffix(3), id: \.self) { color in
-                            Rectangle()
-                                .fill(color)
-                                .frame(width: 100, height: 100)
-                                .onTapGesture {
-                                    checkAnswer(color: color)
-                                }
-                        }
-                    }
-                }
-                Text("Time remaining: \(timeRemaining)")
-                    .font(.custom("Chalkduster", size: 22))
-                    .fontWeight(.bold)
-                Text("Score: \(score)")
-                    .font(.custom("Chalkduster", size: 22))
-                    .fontWeight(.bold)
             }
+            .padding()
         }
-        .padding()
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [.white, .gray.opacity(0.2)]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
         .onAppear {
             if isGameStarted {
                 startGame()
